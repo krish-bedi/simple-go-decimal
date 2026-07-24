@@ -18,3 +18,5 @@ With a precision of four decimal places:
 ```text
 1.23 is stored as 12300
 12300 / 10000 = 1.23
+
+test
