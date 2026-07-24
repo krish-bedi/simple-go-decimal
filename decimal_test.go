@@ -35,6 +35,7 @@ func TestDecimalAndString(t *testing.T) {
 		{-7000, -4, "-0.7"},
 		{7, -4, "0.0007"},
 		{7000, -4, "0.7"},
+		{-120, 0, "-120"},
 	}
 
 	for _, c := range cases {

@@ -79,7 +79,8 @@ func (d Decimal) String() string {
 	decimalPlace := len(str) - precision
 	decimalStr := str[:decimalPlace] + "." + str[decimalPlace:]
 
-	resultStr := strings.TrimRight(decimalStr, "0.")
+	resultStr := strings.TrimRight(decimalStr, "0")
+	resultStr = strings.TrimSuffix(resultStr, ".")
 	if negative {
 		resultStr = "-" + resultStr
 	}
