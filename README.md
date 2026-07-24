@@ -2,15 +2,19 @@
 
 ## The Problem
 
-Floats use base-2 which struggle at representing certain values such as 0.1
+Binary floating-point values cannot represent many base-10 fractions exactly. For
+example, `0.1` has no finite binary representation, much like `1/3` has no
+finite decimal representation.
 
-Just like how our everyday base-10 system struggles to represent 1/3 = 0.333333...
-
-In case of monetary values, money is naturally base-10 which is why we store it in base-10 or decimal.
+This can make `float64` a poor choice for values such as money, where exact
+base-10 arithmetic matters.
 
 ## The Solution
 
-Store fractional values as integers to the 10th power. 
-This lets us store numbers in base-10 and prevent rounding errors that would be present with using floats.
+`simple-go-decimal` stores each value as a scaled `int64` instead of a binary
+floating-point number.
+With a precision of four decimal places:
 
-simple-go-decimal uses a precision of 4 i.e., up to 0.0001 can be represented perfectly
+```text
+1.23 is stored as 12300
+12300 / 10000 = 1.23
