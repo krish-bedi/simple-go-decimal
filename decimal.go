@@ -58,14 +58,18 @@ func New(value int64, exponent int8) (Decimal, error) {
 }
 
 func (d Decimal) String() string {
-	str := strconv.FormatInt(d.fixed, 10)
-
-	var negative = false
-
-	if strings.HasPrefix(str, "-") {
-		str = strings.TrimPrefix(str, "-")
-		negative = true
+	if d.fixed == 0 {
+		return "0"
 	}
+
+	num := d.fixed
+	negative := num < 0
+
+	if negative {
+		num = -num
+	}
+
+	str := strconv.FormatInt(num, 10)
 
 	padLength := (1 + precision) - len(str)
 	if padLength > 0 {
