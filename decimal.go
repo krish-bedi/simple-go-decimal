@@ -63,8 +63,8 @@ func (d Decimal) String() string {
 	}
 
 	num := d.fixed
-	negative := num < 0
 
+	negative := num < 0
 	if negative {
 		num = -num
 	}
@@ -80,13 +80,9 @@ func (d Decimal) String() string {
 	decimalStr := str[:decimalPlace] + "." + str[decimalPlace:]
 
 	resultStr := strings.TrimRight(decimalStr, "0.")
-
 	if negative {
 		resultStr = "-" + resultStr
 	}
 
-	if len(resultStr) == 0 {
-		return "0"
-	}
 	return resultStr
 }
