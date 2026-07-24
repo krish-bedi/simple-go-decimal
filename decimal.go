@@ -81,9 +81,18 @@ func (d Decimal) String() string {
 
 	resultStr := strings.TrimRight(decimalStr, "0")
 	resultStr = strings.TrimSuffix(resultStr, ".")
+
 	if negative {
 		resultStr = "-" + resultStr
 	}
 
 	return resultStr
+}
+
+func (d Decimal) Add(other Decimal) Decimal {
+	return Decimal{fixed: d.fixed + other.fixed}
+}
+
+func (d Decimal) Sub(other Decimal) Decimal {
+	return Decimal{fixed: d.fixed - other.fixed}
 }
