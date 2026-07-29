@@ -13,7 +13,7 @@ base-10 arithmetic matters.
 
 `simple-go-decimal` stores each value as a scaled `int64` instead of a binary
 floating-point number.
-With a precision of four decimal places, which is enough to cover most common monetary cases
+The precision is set to a default of four but can be changed via `const precision = 4` at the top of `decimal.go`
 
 ```text
 1.23 is stored as 12300
