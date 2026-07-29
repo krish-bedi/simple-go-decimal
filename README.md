@@ -19,3 +19,28 @@ The precision is set to a **default of four**. The precision can be changed via 
 1.23 is stored as 12300
 12300 / 10000 = 1.23
 ```
+## Benefits & Caveats
+
+### Performance
+
+| Operation            | Implementation                                              |
+| -------------------- | ---------------------------------------------------------- |
+| Addition, Subtraction | Native `int64` arithmetic with overflow checks             |
+| Multiplication, Division | `big.Int` for the transient intermediate, result stored back as `int64` |
+
+Addition and subtraction operate directly on the scaled `int64`, so they stay
+allocation-free and take one CPU instruction. 
+
+Multiplication and division briefly use a `big.Int` to hold an
+intermediate value that can exceed `int64` before being scaled back down — this
+avoids overflow on values that would otherwise wrap.
+
+### Caveats
+
+- **Range:** values must fit in an `int64` after scaling. With the default
+  precision of 4, the range is roughly
+  `-922,337,203,685,477.5808` to `922,337,203,685,477.5807`. Operations that
+  exceed this return `ErrOverflow`.
+- **Rounding:** multiplication and division truncate toward zero, so digits
+  beyond the configured precision are dropped (e.g. `2 / 3` becomes `0.6666`,
+  not `0.6667`).
