@@ -63,14 +63,12 @@ func (d Decimal) String() string {
 		return "0"
 	}
 
-	num := d.fixed
+	negative := d.fixed < 0
 
-	negative := num < 0
+	str := strconv.FormatInt(d.fixed, 10)
 	if negative {
-		num = -num
+		str = strings.TrimPrefix(str, "-")
 	}
-
-	str := strconv.FormatInt(num, 10)
 
 	padLength := (1 + precision) - len(str)
 	if padLength > 0 {
@@ -104,7 +102,7 @@ func (d Decimal) Add(other Decimal) (Decimal, error) {
 
 func (d Decimal) Sub(other Decimal) (Decimal, error) {
 	// +overflow
-	if d.fixed > 0 && other.fixed < 0 && d.fixed > math.MaxInt64 + other.fixed {
+	if d.fixed >= 0 && other.fixed < 0 && d.fixed > math.MaxInt64 + other.fixed {
 		return Decimal{}, ErrOverflow
 	}
 	// -overflow

@@ -39,6 +39,8 @@ func TestDecimalAndString(t *testing.T) {
 		{-120, 0, "-120"},
 		{120, 4, "1200000"},
 		{70, -5, "0.0007"},
+		{math.MinInt64, -4, "-922337203685477.5808"},
+		{math.MaxInt64, -4, "922337203685477.5807"},
 	}
 
 	for _, c := range cases {
@@ -121,6 +123,10 @@ func TestAddAndSub(t *testing.T) {
 			{newDecimal(t, math.MaxInt64, -4), newDecimal(t, math.MinInt64, -4), "", tinydecimal.ErrOverflow},
 			// - overflow: -max - max = -2max (2min)
 			{newDecimal(t, math.MinInt64, -4), newDecimal(t, math.MaxInt64, -4), "", tinydecimal.ErrOverflow},
+			// MinInt64 = -9,223,...,808 whereas MaxInt64 = 9,223,...,807
+			// Therefore, 0 - MinInt becomes +9,223,...,808 which doesn't fit in MaxInt64
+			// And overflows by 1 back to MinInt64 (+ overflow)
+			{newDecimal(t, 0, 0), newDecimal(t, math.MinInt64, -4), "", tinydecimal.ErrOverflow},
 		}
 
 		for _, c := range cases {
