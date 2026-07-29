@@ -32,8 +32,8 @@ Addition and subtraction operate directly on the scaled `int64`, so they stay
 allocation-free and take one CPU instruction. 
 
 Multiplication and division briefly use a `big.Int` to hold an
-intermediate value that can exceed `int64` before being scaled back down — this
-avoids overflow on values that would otherwise wrap.
+intermediate value that can exceed `int64` before being scaled back down. This
+avoids overflow
 
 ### Caveats
 
@@ -41,6 +41,6 @@ avoids overflow on values that would otherwise wrap.
   precision of 4, the range is roughly
   `-922,337,203,685,477.5808` to `922,337,203,685,477.5807`. Operations that
   exceed this return `ErrOverflow`.
-- **Rounding:** multiplication and division truncate toward zero, so digits
+- **Rounding:** multiplication and division truncate, so digits
   beyond the configured precision are dropped (e.g. `2 / 3` becomes `0.6666`,
   not `0.6667`).
