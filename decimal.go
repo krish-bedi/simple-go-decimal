@@ -3,20 +3,21 @@ package tinydecimal
 import (
 	"errors"
 	"math"
+	"math/big"
 	"strconv"
 	"strings"
 )
-
-// precision of 4 lets us to store up to 4 digits after the decimal (0.0001)
-// This is enough to store monetary values (2 decimals) with headroom for sub-cent calculations
-const precision = 4
-
-// scale is our multiplier that lets us store fractional values as integers
-const scale int64 = 10000 // 10^4 = 10,000
+const (
+	// precision of 4 lets us to store up to 4 digits after the decimal (0.0001)
+	precision 	= 4
+	// scale is our multiplier that lets us store fractional values as integers
+	scale int64 = 10000 // 10^4 = 10,000
+)
 
 var (
-	ErrOverflow 	  = errors.New("tinyDecimal: value is too large")
-	ErrPrecisionLoss = errors.New("tinyDecimal: value has too many decimal places")
+	ErrOverflow 	   = errors.New("tinyDecimal: value is too large")
+	ErrPrecisionLoss  = errors.New("tinyDecimal: value has too many decimal places")
+	ErrDivisionByZero = errors.New("tinyDecimal: division by zero")
 )
 
 // max decimal value with a precision of 4 is: 922,337,203,685,477.5807
@@ -89,10 +90,67 @@ func (d Decimal) String() string {
 	return resultStr
 }
 
-func (d Decimal) Add(other Decimal) Decimal {
-	return Decimal{fixed: d.fixed + other.fixed}
+func (d Decimal) Add(other Decimal) (Decimal, error) {
+	// +overflow
+	if other.fixed > 0 && d.fixed > 0 && d.fixed > math.MaxInt64 - other.fixed {
+		return Decimal{}, ErrOverflow
+	}
+	// -overflow
+	if other.fixed < 0 && d.fixed < 0 && d.fixed < math.MinInt64 - other.fixed {
+		return Decimal{}, ErrOverflow
+	}
+	return Decimal{fixed: d.fixed + other.fixed}, nil
 }
 
-func (d Decimal) Sub(other Decimal) Decimal {
-	return Decimal{fixed: d.fixed - other.fixed}
+func (d Decimal) Sub(other Decimal) (Decimal, error) {
+	// +overflow
+	if d.fixed > 0 && other.fixed < 0 && d.fixed > math.MaxInt64 + other.fixed {
+		return Decimal{}, ErrOverflow
+	}
+	// -overflow
+	if d.fixed < 0 && other.fixed > 0 && d.fixed < math.MinInt64 + other.fixed {
+		return Decimal{}, ErrOverflow
+	}
+	return Decimal{fixed: d.fixed - other.fixed}, nil
+}
+
+func (d Decimal) Multiply(other Decimal) (Decimal, error) {
+	// Use BigInt to store transient product that would otherwise overflow int64
+	product := new(big.Int).Mul(
+		big.NewInt(d.fixed), 
+		big.NewInt(other.fixed),
+	)
+
+	// Scale back down
+	product.Quo(product, big.NewInt(scale))
+
+	// Check if it fits back in int64
+	if !product.IsInt64() {
+		return Decimal{}, ErrOverflow
+	}
+
+	return Decimal{fixed: product.Int64()}, nil
+}
+
+func (d Decimal) Divide(other Decimal) (Decimal, error) {
+	// Division by Zero error
+	if other.fixed == 0 {
+		return Decimal{}, ErrDivisionByZero
+	}
+
+	// Store transient product in BigInt to prevent overflow
+	// Scale up first to prevent integer division precision loss
+	product := new(big.Int).Mul(
+		big.NewInt(d.fixed),
+		big.NewInt(scale),
+	)
+
+	product.Quo(product, big.NewInt(other.fixed))
+
+	// Check if it fits back in int64
+	if !product.IsInt64() {
+		return Decimal{}, ErrOverflow
+	}
+
+	return Decimal{fixed: product.Int64()}, nil
 }

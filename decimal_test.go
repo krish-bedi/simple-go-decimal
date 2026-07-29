@@ -80,25 +80,124 @@ func TestOverflowAndPrecisionLoss(t *testing.T) {
 
 func TestAddAndSub(t *testing.T) {
 	t.Run("addition", func(t *testing.T) {
-		// 0.1 + 0.2 = 0.3
-		a, _ := tinydecimal.New(1, -1) // 0.1
-		b, _ := tinydecimal.New(2, -1) // 0.2
+		cases := []struct{
+			x 	 tinydecimal.Decimal
+			y 	 tinydecimal.Decimal
+			want string
+			err	 error
+		} {
+			// 0.1 + 0.2 = 0.3
+			{newDecimal(t, 1,-1), newDecimal(t, 2,-1), "0.3", nil},
+			// + overflow: max + max = 2max
+			{newDecimal(t, math.MaxInt64, -4), newDecimal(t, math.MaxInt64, -4), "", tinydecimal.ErrOverflow},
+			// - overflow: (-max) + (-max) = -2max (2min)
+			{newDecimal(t, math.MinInt64, -4), newDecimal(t, math.MinInt64, -4), "", tinydecimal.ErrOverflow},
+		}
 
-		got := a.Add(b).String()
-		want := "0.3"
+		for _, c := range cases {
+			addition, err := c.x.Add(c.y)
 
-		assertEqual(t, got, want)
+			if err != c.err {
+				t.Fatalf("expected error: %v, got %v", c.err, err)
+			}
+
+			if err == nil {
+				got := addition.String()
+				assertEqual(t, got, c.want)
+			}
+		}
 	})
 	
 	t.Run("subtraction", func(t *testing.T) {
-		// 5.75 - 1.25 = 4.5
-		a, _ := tinydecimal.New(575, -2)
-		b, _ := tinydecimal.New(125, -2)
+		cases := []struct{
+			x 	 tinydecimal.Decimal
+			y 	 tinydecimal.Decimal
+			want string
+			err  error
+		} {
+			// 5.75 - 1.25 = 4.5
+			{newDecimal(t, 575,-2), newDecimal(t, 125,-2), "4.5", nil},
+			// + overflow: max - (-max) = 2max
+			{newDecimal(t, math.MaxInt64, -4), newDecimal(t, math.MinInt64, -4), "", tinydecimal.ErrOverflow},
+			// - overflow: -max - max = -2max (2min)
+			{newDecimal(t, math.MinInt64, -4), newDecimal(t, math.MaxInt64, -4), "", tinydecimal.ErrOverflow},
+		}
 
-		got := a.Sub(b).String()
-		want := "4.5"
+		for _, c := range cases {
+			subtraction, err := c.x.Sub(c.y)
 
-		assertEqual(t, got, want)
+			if err != c.err {
+				t.Fatalf("expected error: %v, got %v", c.err, err)
+			}
+
+			if err == nil {
+				got := subtraction.String()
+				assertEqual(t, got, c.want)
+			}
+		}
+	})
+}
+
+func TestMultiplyAndDivide(t *testing.T) {
+	t.Run("test multiply", func(t *testing.T) {
+		cases := []struct{
+			x 	 tinydecimal.Decimal
+			y 	 tinydecimal.Decimal
+			want string
+			err	 error
+		} {
+			// 55.1 * 100.5 = 5,537.55
+			{newDecimal(t, 551,-1), newDecimal(t, 1005,-1), "5537.55", nil},
+			// + overflow: max * 2 = 2max
+			{newDecimal(t, math.MaxInt64, -4), newDecimal(t, 2, 0), "", tinydecimal.ErrOverflow},
+			// - overflow: max * (-2) = -2max (2min)
+			{newDecimal(t, math.MaxInt64, -4), newDecimal(t, -2, 0), "", tinydecimal.ErrOverflow},
+
+		}
+
+		for _, c := range cases {
+			multiplication, err := c.x.Multiply(c.y)
+
+			if err != c.err {
+				t.Fatalf("expected error: %v, got %v", c.err, err)
+			}
+
+			if err == nil {
+				got := multiplication.String()
+				assertEqual(t, got, c.want)
+			}
+		}
+	})
+
+	t.Run("test divide", func(t *testing.T) {
+		cases := []struct{
+			x 	 tinydecimal.Decimal
+			y 	 tinydecimal.Decimal
+			want string
+			err	 error
+		} {
+			// 10.5 / 0.12 = 87.5
+			{newDecimal(t, 105,-1), newDecimal(t, 12,-2), "87.5", nil},
+			// + overflow: max * 0.5 = 2max
+			{newDecimal(t, math.MaxInt64, -4), newDecimal(t, 5,-1), "", tinydecimal.ErrOverflow},
+			// - overflow: min * 0.5 = -2max (2min)
+			{newDecimal(t, math.MinInt64, -4), newDecimal(t, 5,-1), "", tinydecimal.ErrOverflow},
+			// division by 0
+			{newDecimal(t, 123, -1), newDecimal(t, 0, 0), "", tinydecimal.ErrDivisionByZero},
+		}
+
+		for _, c := range cases {
+			division, err := c.x.Divide(c.y)
+
+			if err != c.err {
+				t.Fatalf("expected error: %v, got %v", c.err, err)
+			}
+
+			if err == nil {
+				got := division.String()
+				assertEqual(t, got, c.want)
+			}	
+		}
 	})
 }
 
@@ -107,4 +206,15 @@ func assertEqual[T comparable](t *testing.T, got, want T) {
 	if got != want {
 		t.Errorf("got %v, want %v", got, want)
 	}
+}
+
+func newDecimal(t *testing.T, value int64, exp int8) tinydecimal.Decimal {
+	t.Helper()
+
+	dec, err := tinydecimal.New(value, exp)
+	if err != nil {
+		t.Fatalf("received error during Decimal creation, %v", err)
+	}
+
+	return dec
 }
