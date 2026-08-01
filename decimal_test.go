@@ -20,7 +20,7 @@ func TestFloat(t *testing.T) {
 	}
 }
 
-func TestDecimalAndString(t *testing.T) {
+func TestNewAndString(t *testing.T) {
 	cases := []struct {
 		value int64
 		exponent int8
@@ -94,6 +94,7 @@ func TestAddAndSub(t *testing.T) {
 			{newDecimal(t, math.MaxInt64, -4), newDecimal(t, math.MaxInt64, -4), "", tinydecimal.ErrOverflow},
 			// - overflow: (-max) + (-max) = -2max (2min)
 			{newDecimal(t, math.MinInt64, -4), newDecimal(t, math.MinInt64, -4), "", tinydecimal.ErrOverflow},
+			{newParse(t, "30.99"), newParse(t, "78.1234"), "109.1134", nil},
 		}
 
 		for _, c := range cases {
@@ -127,6 +128,7 @@ func TestAddAndSub(t *testing.T) {
 			// Therefore, 0 - MinInt becomes +9,223,...,808 which doesn't fit in MaxInt64
 			// And overflows by 1 back to MinInt64 (+ overflow)
 			{newDecimal(t, 0, 0), newDecimal(t, math.MinInt64, -4), "", tinydecimal.ErrOverflow},
+			{newParse(t, "25.1234"), newParse(t, "-100.55"), "125.6734", nil},
 		}
 
 		for _, c := range cases {
@@ -158,6 +160,7 @@ func TestMultiplyAndDivide(t *testing.T) {
 			{newDecimal(t, math.MaxInt64, -4), newDecimal(t, 2, 0), "", tinydecimal.ErrOverflow},
 			// - overflow: max * (-2) = -2max (2min)
 			{newDecimal(t, math.MaxInt64, -4), newDecimal(t, -2, 0), "", tinydecimal.ErrOverflow},
+			{newParse(t, "100.24"), newParse(t, "20.1203"), "2016.8588", nil},
 
 		}
 
@@ -190,6 +193,7 @@ func TestMultiplyAndDivide(t *testing.T) {
 			{newDecimal(t, math.MinInt64, -4), newDecimal(t, 5,-1), "", tinydecimal.ErrOverflow},
 			// division by 0
 			{newDecimal(t, 123, -1), newDecimal(t, 0, 0), "", tinydecimal.ErrDivisionByZero},
+			{newParse(t, "999.999"), newParse(t, "0.5678"), "1761.1817", nil},
 		}
 
 		for _, c := range cases {
@@ -205,6 +209,31 @@ func TestMultiplyAndDivide(t *testing.T) {
 			}	
 		}
 	})
+}
+
+func TestParse(t *testing.T) {
+	cases := []struct {
+		input string
+		want tinydecimal.Decimal
+		err error
+	} {
+		{"123", newDecimal(t, 123, 0), nil},
+		{"123.456", newDecimal(t, 123456, -3), nil},
+		{"", newDecimal(t, 0, 0), nil},
+		{"abc", newDecimal(t, 0, 0), tinydecimal.ErrInvalidFormat},
+	}
+
+	for _, c := range cases {
+		got, err := tinydecimal.Parse(c.input)
+
+		if err != c.err {
+			t.Fatalf("expected error %v, but got %v", c.err, err)
+		}
+
+		if err == nil {
+			assertEqual(t, got, c.want)
+		}
+	}
 }
 
 func assertEqual[T comparable](t *testing.T, got, want T) {
@@ -223,4 +252,11 @@ func newDecimal(t *testing.T, value int64, exp int8) tinydecimal.Decimal {
 	}
 
 	return dec
+}
+
+func newParse(t *testing.T, v string) tinydecimal.Decimal {
+	t.Helper()
+	
+	value, _ := tinydecimal.Parse(v)
+	return value
 }

@@ -18,6 +18,7 @@ var (
 	ErrOverflow 	   = errors.New("tinyDecimal: value is too large")
 	ErrPrecisionLoss  = errors.New("tinyDecimal: value has too many decimal places")
 	ErrDivisionByZero = errors.New("tinyDecimal: division by zero")
+	ErrInvalidFormat  = errors.New("tinyDecimal: invalid format")
 )
 
 // max decimal value with a precision of 4 is: 922,337,203,685,477.5807
@@ -58,6 +59,29 @@ func New(value int64, exponent int8) (Decimal, error) {
 	return Decimal{fixed: fixed}, nil
 }
 
+func Parse(v string) (Decimal, error) {
+	if len(v) == 0 {
+		return Decimal{}, nil
+	}
+
+	split := strings.Split(v, ".")
+
+	str := split[0]
+	var exp int8
+
+	if len(split) > 1 { // contains decimal
+		str += split[1]
+		exp = int8(-len(split[1]))
+	}
+
+	value, err := strconv.ParseInt(str, 10, 64)
+	if err != nil {
+		return Decimal{}, ErrInvalidFormat
+	}
+	return New(value, exp)
+}
+
+// returns value as string
 func (d Decimal) String() string {
 	if d.fixed == 0 {
 		return "0"
@@ -88,6 +112,7 @@ func (d Decimal) String() string {
 	return resultStr
 }
 
+// returns a + b. Checks for overflow
 func (d Decimal) Add(other Decimal) (Decimal, error) {
 	// +overflow
 	if other.fixed > 0 && d.fixed > 0 && d.fixed > math.MaxInt64 - other.fixed {
@@ -100,6 +125,7 @@ func (d Decimal) Add(other Decimal) (Decimal, error) {
 	return Decimal{fixed: d.fixed + other.fixed}, nil
 }
 
+// returns a - b. Checks for overflow
 func (d Decimal) Sub(other Decimal) (Decimal, error) {
 	// +overflow
 	if d.fixed >= 0 && other.fixed < 0 && d.fixed > math.MaxInt64 + other.fixed {
@@ -112,6 +138,7 @@ func (d Decimal) Sub(other Decimal) (Decimal, error) {
 	return Decimal{fixed: d.fixed - other.fixed}, nil
 }
 
+// returns a * b. Checks for overflow
 func (d Decimal) Multiply(other Decimal) (Decimal, error) {
 	// Use BigInt to store transient product that would otherwise overflow int64
 	product := new(big.Int).Mul(
@@ -130,6 +157,7 @@ func (d Decimal) Multiply(other Decimal) (Decimal, error) {
 	return Decimal{fixed: product.Int64()}, nil
 }
 
+// returns a / b. Checks for overflow
 func (d Decimal) Divide(other Decimal) (Decimal, error) {
 	// Division by Zero error
 	if other.fixed == 0 {

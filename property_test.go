@@ -117,6 +117,27 @@ func TestDivideByItself(t *testing.T) {
 	}
 }
 
+// Property: if Parse(x) returns Decimal d; d.String() == x
+// Only exception being x = "" (empty string), d.String() = "0"
+func TestParseAndString(t *testing.T) {
+	property := func(x string) bool {
+		if len(x) == 0 {
+			return true // d.String() == "0"
+		}
+
+		decimal, err := tinydecimal.Parse(x)
+		if err != nil {
+			return true // skip invalid format inputs
+		}
+
+		return decimal.String() == x
+	}
+
+	if err := quick.Check(property, nil); err != nil {
+		t.Error(err)
+	}
+}
+
 // get exponents in range of -4 to +4
 func modExp(e int8) int8 {
 	return e % 5
