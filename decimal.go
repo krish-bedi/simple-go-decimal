@@ -7,12 +7,12 @@ import (
 	"strconv"
 	"strings"
 )
-const (
-	// precision of 4 lets us to store up to 4 digits after the decimal (0.0001)
-	precision 	= 4
-	// scale is our multiplier that lets us store fractional values as integers
-	scale int64 = 10000 // 10^4 = 10,000
-)
+
+// precision of 4 lets us to store up to 4 digits after the decimal (0.0001)
+const precision = 4
+
+// scale is our multiplier that lets us store fractional values as integers
+var scale int64 = int64(math.Pow10(precision)) // 10^4 = 10,000
 
 var (
 	ErrOverflow 	   = errors.New("tinyDecimal: value is too large")
