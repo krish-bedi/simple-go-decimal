@@ -27,7 +27,7 @@ type Decimal struct {
 }
 
 // New builds a Decimal from (value * 10^exp)
-// Example: New(123, -2) -> 123 * 10^-2 = 1.23
+// Example: New(123, -2) -> 123 * 10^-2 = 1.23. 
 // int8 is used for the exponent as its enough to cover the decimal shift for int64 (19 digits)
 func New(value int64, exponent int8) (Decimal, error) {
 	shift := int32(exponent) + int32(precision)
