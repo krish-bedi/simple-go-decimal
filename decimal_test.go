@@ -239,6 +239,20 @@ func TestParse(t *testing.T) {
 	}
 }
 
+// Fuzz test on Parse()
+// Run with: go test -fuzz FuzzParse
+func FuzzParse(f *testing.F) {
+	// seed inputs:
+	f.Add("123.45")
+	f.Add("-6000")
+	f.Add("0")
+
+	f.Fuzz(func(t *testing.T, s string) {
+		// should not panic
+		_ = newParse(t, s)
+	})
+}
+
 func TestComparison(t *testing.T) {
 	t.Run("relational comparison", func(t *testing.T) {
 		cases := []struct {
