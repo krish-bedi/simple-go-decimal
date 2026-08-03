@@ -28,8 +28,8 @@ type Decimal struct {
 }
 
 // New builds a Decimal from (value * 10^exp)
-// Example: New(123, -2) -> 123 * 10^-2 = 1.23. 
-// int8 is used for the exponent as its enough to cover the decimal shift for int64 (19 digits)
+//
+// Example: New(123, -2) -> 123 * 10^-2 = 1.23.
 func New(value int64, exponent int8) (Decimal, error) {
 	shift := int32(exponent) + int32(precision)
 	fixed := value
@@ -59,6 +59,8 @@ func New(value int64, exponent int8) (Decimal, error) {
 	return Decimal{fixed: fixed}, nil
 }
 
+// Builds a Decimal from a string. 
+// Returns ErrInvalidFormat if the string is invalid
 func Parse(v string) (Decimal, error) {
 	if len(v) == 0 {
 		return Decimal{}, nil
@@ -81,7 +83,7 @@ func Parse(v string) (Decimal, error) {
 	return New(value, exp)
 }
 
-// returns value as string
+// Returns value as string
 func (d Decimal) String() string {
 	if d.fixed == 0 {
 		return "0"
@@ -112,38 +114,38 @@ func (d Decimal) String() string {
 	return resultStr
 }
 
-// returns a + b. Checks for overflow
-func (d Decimal) Add(other Decimal) (Decimal, error) {
+// Returns x + y. Checks for overflow
+func (x Decimal) Add(y Decimal) (Decimal, error) {
 	// +overflow
-	if other.fixed > 0 && d.fixed > 0 && d.fixed > math.MaxInt64 - other.fixed {
+	if y.fixed > 0 && x.fixed > 0 && x.fixed > math.MaxInt64 - y.fixed {
 		return Decimal{}, ErrOverflow
 	}
 	// -overflow
-	if other.fixed < 0 && d.fixed < 0 && d.fixed < math.MinInt64 - other.fixed {
+	if y.fixed < 0 && x.fixed < 0 && x.fixed < math.MinInt64 - y.fixed {
 		return Decimal{}, ErrOverflow
 	}
-	return Decimal{fixed: d.fixed + other.fixed}, nil
+	return Decimal{fixed: x.fixed + y.fixed}, nil
 }
 
-// returns a - b. Checks for overflow
-func (d Decimal) Sub(other Decimal) (Decimal, error) {
+// Returns x - y. Checks for overflow
+func (x Decimal) Sub(y Decimal) (Decimal, error) {
 	// +overflow
-	if d.fixed >= 0 && other.fixed < 0 && d.fixed > math.MaxInt64 + other.fixed {
+	if x.fixed >= 0 && y.fixed < 0 && x.fixed > math.MaxInt64 + y.fixed {
 		return Decimal{}, ErrOverflow
 	}
 	// -overflow
-	if d.fixed < 0 && other.fixed > 0 && d.fixed < math.MinInt64 + other.fixed {
+	if x.fixed < 0 && y.fixed > 0 && x.fixed < math.MinInt64 + y.fixed {
 		return Decimal{}, ErrOverflow
 	}
-	return Decimal{fixed: d.fixed - other.fixed}, nil
+	return Decimal{fixed: x.fixed - y.fixed}, nil
 }
 
-// returns a * b. Checks for overflow
-func (d Decimal) Multiply(other Decimal) (Decimal, error) {
-	// Use BigInt to store transient product that would otherwise overflow int64
+// Returns x * y. Checks for overflow
+func (x Decimal) Multiply(y Decimal) (Decimal, error) {
+	// Use BigInt to store transient product that could otherwise overflow int64
 	product := new(big.Int).Mul(
-		big.NewInt(d.fixed), 
-		big.NewInt(other.fixed),
+		big.NewInt(x.fixed), 
+		big.NewInt(y.fixed),
 	)
 
 	// Scale back down
@@ -157,21 +159,21 @@ func (d Decimal) Multiply(other Decimal) (Decimal, error) {
 	return Decimal{fixed: product.Int64()}, nil
 }
 
-// returns a / b. Checks for overflow
-func (d Decimal) Divide(other Decimal) (Decimal, error) {
+// Returns x / y. Checks for overflow
+func (x Decimal) Divide(y Decimal) (Decimal, error) {
 	// Division by Zero error
-	if other.fixed == 0 {
+	if y.fixed == 0 {
 		return Decimal{}, ErrDivisionByZero
 	}
 
 	// Store transient product in BigInt to prevent overflow
 	// Scale up first to prevent integer division precision loss
 	product := new(big.Int).Mul(
-		big.NewInt(d.fixed),
+		big.NewInt(x.fixed),
 		big.NewInt(scale),
 	)
 
-	product.Quo(product, big.NewInt(other.fixed))
+	product.Quo(product, big.NewInt(y.fixed))
 
 	// Check if it fits back in int64
 	if !product.IsInt64() {
@@ -179,4 +181,44 @@ func (d Decimal) Divide(other Decimal) (Decimal, error) {
 	}
 
 	return Decimal{fixed: product.Int64()}, nil
+}
+
+// Compare x and y and return:
+//	- +1 if x > y
+//	- 0 if x == y
+//	- -1 if x < y
+func (x Decimal) Cmp(y Decimal) int {
+	switch {
+	case x.fixed < y.fixed:
+		return -1
+	case x.fixed > y.fixed:
+		return 1
+	default:
+		return 0
+	}
+}
+
+// Returns x == y
+func (x Decimal) Equal(y Decimal) bool {
+	return x.Cmp(y) == 0
+}
+
+// Returns x > y
+func (x Decimal) GreaterThan(y Decimal) bool {
+	return x.Cmp(y) > 0
+}
+
+// Returns x < y
+func (x Decimal) LessThan(y Decimal) bool {
+	return x.Cmp(y) < 0
+}
+
+// Returns x >= y
+func (x Decimal) GreaterThanOrEqual(y Decimal) bool {
+	return x.Cmp(y) >= 0
+}
+
+// Returns x <= y
+func (x Decimal) LessThanOrEqual(y Decimal) bool {
+	return x.Cmp(y) <= 0
 }

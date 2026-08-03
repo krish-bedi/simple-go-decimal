@@ -220,6 +220,9 @@ func TestParse(t *testing.T) {
 		{"123", newDecimal(t, 123, 0), nil},
 		{"123.456", newDecimal(t, 123456, -3), nil},
 		{"", newDecimal(t, 0, 0), nil},
+		{"-30.5", newDecimal(t, -305, -1), nil},
+		{"+30.5", newDecimal(t, 305, -1), nil},
+		{"1+30.5", newDecimal(t, 0, 0), tinydecimal.ErrInvalidFormat},
 		{"abc", newDecimal(t, 0, 0), tinydecimal.ErrInvalidFormat},
 	}
 
@@ -234,6 +237,65 @@ func TestParse(t *testing.T) {
 			assertEqual(t, got, c.want)
 		}
 	}
+}
+
+func TestComparison(t *testing.T) {
+	cases := []struct {
+		x 		tinydecimal.Decimal
+		y 		tinydecimal.Decimal
+		equal 	bool
+		greater bool
+		less 	bool
+	}{
+		{newParse(t, "100"), newParse(t, "100"), true, false, false},
+		{newParse(t, "10.0"), newParse(t, "10.00"), true, false, false},
+		{newParse(t, "200.1"), newParse(t, "200.0"), false, true, false},
+		{newDecimal(t, math.MaxInt64, -4), newDecimal(t, math.MinInt64, -4), false, true, false},
+		{newParse(t, "0.0001"), newParse(t, "0.001"), false, false, true},
+		{newDecimal(t, math.MinInt64, -4), newDecimal(t, math.MaxInt64, -4), false, false, true},
+	}
+
+	for _, c := range cases {
+		if c.equal {
+			xEqualY := c.x.Equal(c.y)
+			xGteY := c.x.GreaterThanOrEqual(c.y)
+			xLteY := c.x.LessThanOrEqual(c.y)
+			if !(xEqualY && xGteY && xLteY) {
+				t.Errorf(
+					"\n%[1]v == %[2]v but received:\n"+
+						"\t%[1]v == %[2]v: %[3]v\n"+
+						"\t%[1]v >= %[2]v: %[4]v\n"+
+						"\t%[1]v <= %[2]v: %[5]v",
+					c.x, c.y, xEqualY, xGteY, xLteY,
+				)
+			}
+		}
+		if c.greater {
+			xGtY := c.x.GreaterThan(c.y)
+			xGteY := c.x.GreaterThanOrEqual(c.y)
+			if !(xGtY && xGteY) {
+				t.Errorf(
+					"\n%[1]v > %[2]v but received:\n"+
+					"\t%[1]v > %[2]v: %[3]v\n"+
+					"\t%[1]v >= %[2]v: %[4]v",
+					c.x, c.y, xGtY, xGteY,
+				)
+			}
+		}
+		if c.less {
+			xLtY := c.x.LessThan(c.y)
+			xLteY := c.x.LessThanOrEqual(c.y)
+			if !(xLtY && xLteY) {
+				t.Errorf(
+					"\n%[1]v < %[2]v but received:\n"+
+					"\t%[1]v < %[2]v: %[3]v\n"+
+					"\t%[1]v <= %[2]v: %[4]v",
+					c.x, c.y, xLtY, xLteY,
+				)
+			}
+		}
+	}
+
 }
 
 func assertEqual[T comparable](t *testing.T, got, want T) {
@@ -256,7 +318,7 @@ func newDecimal(t *testing.T, value int64, exp int8) tinydecimal.Decimal {
 
 func newParse(t *testing.T, v string) tinydecimal.Decimal {
 	t.Helper()
-	
+
 	value, _ := tinydecimal.Parse(v)
 	return value
 }
