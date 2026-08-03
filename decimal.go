@@ -222,3 +222,28 @@ func (x Decimal) GreaterThanOrEqual(y Decimal) bool {
 func (x Decimal) LessThanOrEqual(y Decimal) bool {
 	return x.Cmp(y) <= 0
 }
+
+// Returns if x > 0
+func(x Decimal) IsPositive() bool {
+	return x.fixed > 0
+}
+
+// Returns if x < 0
+func(x Decimal) IsNegative() bool {
+	return x.fixed < 0
+}
+
+// Returns if x == 0
+func (x Decimal) IsZero() bool {
+	return x.fixed == 0
+}
+
+// Returns if x is integer
+func (x Decimal) IsInt() bool {
+	return x.fixed % scale == 0
+}
+
+// Returns the integer part of x
+func (x Decimal) IntPart() int64 {
+	return x.fixed / scale
+}

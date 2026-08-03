@@ -240,61 +240,95 @@ func TestParse(t *testing.T) {
 }
 
 func TestComparison(t *testing.T) {
-	cases := []struct {
-		x 		tinydecimal.Decimal
-		y 		tinydecimal.Decimal
-		equal 	bool
-		greater bool
-		less 	bool
-	}{
+	t.Run("relational comparison", func(t *testing.T) {
+		cases := []struct {
+			x 		tinydecimal.Decimal
+			y 		tinydecimal.Decimal
+			equal 	bool
+			greater bool
+			less 	bool
+		}{
 		{newParse(t, "100"), newParse(t, "100"), true, false, false},
 		{newParse(t, "10.0"), newParse(t, "10.00"), true, false, false},
 		{newParse(t, "200.1"), newParse(t, "200.0"), false, true, false},
 		{newDecimal(t, math.MaxInt64, -4), newDecimal(t, math.MinInt64, -4), false, true, false},
 		{newParse(t, "0.0001"), newParse(t, "0.001"), false, false, true},
 		{newDecimal(t, math.MinInt64, -4), newDecimal(t, math.MaxInt64, -4), false, false, true},
-	}
+		}
 
-	for _, c := range cases {
-		if c.equal {
-			xEqualY := c.x.Equal(c.y)
-			xGteY := c.x.GreaterThanOrEqual(c.y)
-			xLteY := c.x.LessThanOrEqual(c.y)
-			if !(xEqualY && xGteY && xLteY) {
-				t.Errorf(
-					"\n%[1]v == %[2]v but received:\n"+
-						"\t%[1]v == %[2]v: %[3]v\n"+
-						"\t%[1]v >= %[2]v: %[4]v\n"+
-						"\t%[1]v <= %[2]v: %[5]v",
-					c.x, c.y, xEqualY, xGteY, xLteY,
-				)
+		for _, c := range cases {
+			if c.equal {
+				xEqualY := c.x.Equal(c.y)
+				xGteY := c.x.GreaterThanOrEqual(c.y)
+				xLteY := c.x.LessThanOrEqual(c.y)
+				if !(xEqualY && xGteY && xLteY) {
+					t.Errorf(
+						"\n%[1]v == %[2]v but received:\n"+
+							"\t%[1]v == %[2]v: %[3]v\n"+
+							"\t%[1]v >= %[2]v: %[4]v\n"+
+							"\t%[1]v <= %[2]v: %[5]v",
+						c.x, c.y, xEqualY, xGteY, xLteY,
+					)
+				}
+			}
+			if c.greater {
+				xGtY := c.x.GreaterThan(c.y)
+				xGteY := c.x.GreaterThanOrEqual(c.y)
+				if !(xGtY && xGteY) {
+					t.Errorf(
+						"\n%[1]v > %[2]v but received:\n"+
+						"\t%[1]v > %[2]v: %[3]v\n"+
+						"\t%[1]v >= %[2]v: %[4]v",
+						c.x, c.y, xGtY, xGteY,
+					)
+				}
+			}
+			if c.less {
+				xLtY := c.x.LessThan(c.y)
+				xLteY := c.x.LessThanOrEqual(c.y)
+				if !(xLtY && xLteY) {
+					t.Errorf(
+						"\n%[1]v < %[2]v but received:\n"+
+						"\t%[1]v < %[2]v: %[3]v\n"+
+						"\t%[1]v <= %[2]v: %[4]v",
+						c.x, c.y, xLtY, xLteY,
+					)
+				}
 			}
 		}
-		if c.greater {
-			xGtY := c.x.GreaterThan(c.y)
-			xGteY := c.x.GreaterThanOrEqual(c.y)
-			if !(xGtY && xGteY) {
-				t.Errorf(
-					"\n%[1]v > %[2]v but received:\n"+
-					"\t%[1]v > %[2]v: %[3]v\n"+
-					"\t%[1]v >= %[2]v: %[4]v",
-					c.x, c.y, xGtY, xGteY,
-				)
-			}
+	})
+	
+	t.Run("sign checks", func(t *testing.T) {
+		pos := newParse(t, "+1.1").IsPositive()
+		neg := newParse(t, "-1.1").IsNegative()
+		zero := newParse(t, "00.000").IsZero()
+
+		if !(pos && neg && zero) {
+			t.Errorf(
+				"\n+1.1 > 0, received: %v\n"+
+				"-1.1 < 0, received: %v\n"+
+				"0 == 0, received: %v\n",
+				pos, neg, zero,
+			)
 		}
-		if c.less {
-			xLtY := c.x.LessThan(c.y)
-			xLteY := c.x.LessThanOrEqual(c.y)
-			if !(xLtY && xLteY) {
-				t.Errorf(
-					"\n%[1]v < %[2]v but received:\n"+
-					"\t%[1]v < %[2]v: %[3]v\n"+
-					"\t%[1]v <= %[2]v: %[4]v",
-					c.x, c.y, xLtY, xLteY,
-				)
-			}
+	})
+
+	t.Run("int checks", func(t *testing.T) {
+		x := newParse(t, "100").IsInt()
+		y := newParse(t, "123.00").IsInt()
+		z := newParse(t, "200.0002").IsInt()
+		num := newParse(t, "555.556").IntPart()
+
+		if !(x && y && !z && num == 555) {
+			t.Errorf(
+				"\n100 is int, received: %v\n"+
+				"123.00 is int, received: %v\n"+
+				"200.0002 is Not int, received: %v\n"+
+				"\"555.556\".IntPart() returned: %v\n",
+				x, y, z, num,
+			)
 		}
-	}
+	})
 
 }
 
@@ -318,7 +352,6 @@ func newDecimal(t *testing.T, value int64, exp int8) tinydecimal.Decimal {
 
 func newParse(t *testing.T, v string) tinydecimal.Decimal {
 	t.Helper()
-
 	value, _ := tinydecimal.Parse(v)
 	return value
 }
